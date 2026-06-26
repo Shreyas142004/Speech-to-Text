@@ -7,26 +7,43 @@ import { translateText } from "../controllers/translateController";
 
 const router = Router();
 
-// Set up Multer for handling file uploads directly
-// Note: __dirname is now src/routes, so uploads goes to root/uploads
+// ==============================================================================
+// STEP 1: Setting up Multer (The File Catcher)
+// When the React frontend sends an audio file, Express doesn't know how to handle
+// files natively. Multer is a helper that catches the file from the incoming request.
+// ==============================================================================
+
+// We tell Multer where to save the files (the "uploads" folder in the root directory).
 const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
 
+// We tell Multer exactly how to name the files so they don't overwrite each other.
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir);
+        cb(null, uploadDir); // Save it here
     },
     filename: (req, file, cb) => {
+        // Generate a random unique name, like: audio-16382039.webm
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
         cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
 const upload = multer({ storage: storage });
 
-// ✅ Route
+// ==============================================================================
+// STEP 2: Creating the API Routes (The Doors to our Backend)
+// ==============================================================================
+
+// Door #1: '/speech-to-text'
+// When the frontend knocks on this door, 'upload.single("audio")' catches the file,
+// saves it to disk, and THEN passes control to our 'speechToText' controller logic.
 router.post("/speech-to-text", upload.single("audio"), speechToText as any);
+
+// Door #2: '/translate'
+// When the frontend knocks on this door, it just hands over the text to the 
+// 'translateText' controller to run the Python translation script.
 router.post("/translate", translateText as any);
 
 export default router;
