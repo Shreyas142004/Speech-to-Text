@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,20 +6,37 @@
 
 @layer base {
   body {
-    @apply m-0 min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 dark:from-slate-950 dark:via-[#09090b] dark:to-indigo-950 font-sans text-slate-900 dark:text-slate-50 antialiased transition-colors duration-300;
+    @apply m-0 min-h-screen font-sans text-slate-900 dark:text-slate-50 antialiased overflow-x-hidden;
+    font-family: 'Outfit', sans-serif;
   }
 }
 
-.dashboard-card {
-  @apply bg-white dark:bg-[#18181b] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm;
+/* Static Premium Gradient Background */
+.bg-gradient-background {
+  background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 50%, #dbeafe 100%);
+  min-height: 100vh;
 }
 
-.input-minimal {
-  @apply bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all;
+.dark .bg-gradient-background {
+  background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #09090b 100%);
+  min-height: 100vh;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  @apply bg-white/70 dark:bg-slate-950/60 backdrop-blur-xl border border-white/50 dark:border-slate-800/50 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all duration-300;
+}
+
+.glass-pill {
+  @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/20 dark:shadow-black/40 rounded-2xl;
+}
+
+.input-glass {
+  @apply bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all duration-300 shadow-inner;
 }
 
 /* Custom Scrollbar */
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { @apply bg-slate-200 dark:bg-slate-800 rounded-full; }
-::-webkit-scrollbar-thumb:hover { @apply bg-slate-300 dark:bg-slate-700; }
+::-webkit-scrollbar-thumb { @apply bg-slate-300/80 dark:bg-slate-700/80 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-slate-400 dark:bg-slate-600; }

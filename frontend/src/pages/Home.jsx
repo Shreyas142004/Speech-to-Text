@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { Upload, FileAudio, Play, Square, Copy, Download, Loader2, Check, Mic, Globe } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { Upload, FileAudio, Play, Square, Copy, Download, Loader2, Check, Mic, Globe, Sparkles } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function Home() {
   const [file, setFile] = useState(null);
@@ -13,24 +13,19 @@ function Home() {
   const [multiSpeaker, setMultiSpeaker] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   
-  // Translation states
-  const [translatedText, setTranslatedText] = useState('');
-  const [targetLanguage, setTargetLanguage] = useState('en');
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedCopied, setTranslatedCopied] = useState(false);
-  
-  // Recording states
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
   const location = useLocation();
+  const navigate = useNavigate();
+  const hasLoadedHistoryRef = useRef(false);
 
   useEffect(() => {
-    if (location.state?.transcript) {
+    if (location.state?.transcript && !hasLoadedHistoryRef.current) {
+      hasLoadedHistoryRef.current = true;
       setTranscript(location.state.transcript);
       toast.success(`Loaded from history: ${location.state.fileName}`);
-      // Clear the state so refreshing doesn't show the toast again
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -98,7 +93,6 @@ function Home() {
 
     setIsProcessing(true);
     setTranscript('');
-    setTranslatedText('');
 
     const formData = new FormData();
     if (file) {
@@ -124,7 +118,6 @@ function Home() {
         toast.success("Transcription complete!");
         setTranscript(returnedTranscript);
         
-        // Save to history via localStorage directly
         const newEntry = {
           id: Date.now(),
           date: new Date().toLocaleString(),
@@ -141,40 +134,6 @@ function Home() {
       setTranscript(`Error: Could not transcribe the audio. \nDetails: ${serverMsg}`);
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const handleTranslate = async () => {
-    if (!transcript) return;
-    setIsTranslating(true);
-    setTranslatedText('');
-    try {
-      const response = await axios.post('http://localhost:4000/translate', {
-        text: transcript,
-        targetLanguage: targetLanguage
-      });
-      
-      if (response.data.translatedText) {
-        toast.success("Translation complete!");
-        setTranslatedText(response.data.translatedText);
-      } else {
-        toast.error("Translation returned empty.");
-      }
-    } catch (error) {
-      console.error('Translation error:', error);
-      const serverMsg = error.response?.data?.error || error.response?.data?.details || error.message;
-      toast.error(`Translation Failed: ${serverMsg}`);
-      setTranslatedText('Error: Could not translate the text.');
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
-  const handleTranslatedCopy = () => {
-    if (translatedText) {
-      navigator.clipboard.writeText(translatedText);
-      setTranslatedCopied(true);
-      setTimeout(() => setTranslatedCopied(false), 2000);
     }
   };
 
@@ -197,6 +156,10 @@ function Home() {
     URL.revokeObjectURL(url);
   };
 
+  const navigateToTranslate = () => {
+    navigate('/translate', { state: { textToTranslate: transcript } });
+  };
+
   const renderFormattedText = (text) => {
     if (!text) return null;
     const paragraphs = text.split('\n\n');
@@ -208,101 +171,108 @@ function Home() {
         const speakerNumber = speakerLetter.charCodeAt(0) - 64; 
         
         const colors = [
-          'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-          'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-          'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-          'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300'
+          'bg-blue-100/50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
+          'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+          'bg-purple-100/50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800',
+          'bg-amber-100/50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+          'bg-pink-100/50 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 border border-pink-200 dark:border-pink-800'
         ];
         
         const colorIndex = (isNaN(speakerNumber) || speakerNumber < 1) ? 0 : (speakerNumber - 1) % colors.length;
         const colorClass = colors[colorIndex];
 
         return (
-          <div key={idx} className="mb-5">
-            <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold tracking-wider mb-2 uppercase ${colorClass}`}>
+          <div key={idx} className="mb-5 bg-white/30 dark:bg-slate-900/30 backdrop-blur-sm p-4 rounded-2xl border border-white/50 dark:border-slate-800/50 shadow-sm">
+            <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold tracking-wider mb-2 uppercase shadow-sm ${colorClass}`}>
               Speaker {speakerNumber}
             </span>
-            <p className="text-base font-bold tracking-wide leading-loose">
+            <p className="text-base font-medium tracking-wide leading-loose">
               {content}
             </p>
           </div>
         );
       }
-      return <p key={idx} className="mb-4 text-base font-bold tracking-wide leading-loose whitespace-pre-wrap">{p}</p>;
+      return <p key={idx} className="mb-4 text-base font-medium tracking-wide leading-loose whitespace-pre-wrap px-2">{p}</p>;
     });
   };
 
   return (
-    <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in zoom-in-95 duration-500">
+      
       {/* Left Column: Controls */}
       <div className="lg:col-span-5 flex flex-col gap-6">
-        <div className="dashboard-card p-6">
-          <h2 className="font-semibold text-lg mb-4">Input Source</h2>
+        
+        <div className="glass-panel p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
+              <Upload className="w-5 h-5" />
+            </div>
+            <h2 className="font-bold text-xl">Input Source</h2>
+          </div>
           
           <div className="flex flex-col gap-4">
             {isRecording ? (
               <button 
                 onClick={stopRecording}
-                className="w-full flex justify-center items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-900/50 py-3 rounded-xl font-medium transition-all"
+                className="w-full flex justify-center items-center gap-2 bg-red-500 hover:bg-red-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-red-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] animate-pulse"
               >
-                <Square className="fill-current w-4 h-4" />
+                <Square className="fill-current w-5 h-5" />
                 Stop Recording
               </button>
             ) : (
               <button 
                 onClick={startRecording}
-                className="w-full flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium shadow-sm transition-all"
+                className="w-full flex justify-center items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
-                <Mic className="w-4 h-4" />
+                <Mic className="w-5 h-5" />
                 Start Recording
               </button>
             )}
 
             <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-              <span className="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Or</span>
-              <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+              <div className="flex-grow border-t border-slate-200 dark:border-slate-800/50"></div>
+              <span className="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase tracking-wider font-bold">Or</span>
+              <div className="flex-grow border-t border-slate-200 dark:border-slate-800/50"></div>
             </div>
 
             {!file && !isRecording && (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 <input
                   type="text"
                   placeholder="Paste YouTube URL here..."
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
-                  className="input-minimal w-full"
+                  className="input-glass w-full"
                 />
-                <div className="relative flex items-center py-1">
-                  <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-                  <span className="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase tracking-wider font-semibold">Or Upload</span>
-                  <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-                </div>
+                
                 <div 
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  className="input-minimal border-dashed border-2 flex flex-col items-center justify-center p-8 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
+                  className="input-glass border-dashed border-2 flex flex-col items-center justify-center p-8 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 group"
                   onClick={() => document.getElementById('audio-upload').click()}
                 >
-                  <Upload className="w-6 h-6 text-slate-400 mb-3" />
-                  <p className="font-medium text-sm text-slate-600 dark:text-slate-300">Upload audio or video file</p>
-                  <p className="text-xs text-slate-400 mt-1">MP3, WAV, MP4, MOV up to 25MB</p>
+                  <div className="p-4 bg-slate-100 dark:bg-slate-800/50 rounded-full group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors mb-3">
+                    <Upload className="w-6 h-6 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                  </div>
+                  <p className="font-bold text-sm text-slate-700 dark:text-slate-200">Drag & Drop or Click to Upload</p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">MP3, WAV, MP4, MOV up to 25MB</p>
                   <input type="file" id="audio-upload" className="hidden" accept="audio/*,video/*" onChange={handleFileChange} />
                 </div>
               </div>
             )}
 
             {file && !isRecording && (
-              <div className="input-minimal flex items-center justify-between p-3">
+              <div className="input-glass flex items-center justify-between p-4 bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/50">
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <FileAudio className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                    <FileAudio className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  </div>
                   <div className="truncate">
-                    <p className="text-sm font-medium truncate">{file.name}</p>
-                    <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <p className="text-sm font-bold truncate text-slate-800 dark:text-slate-200">{file.name}</p>
+                    <p className="text-xs text-slate-500 font-medium">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
                 </div>
-                <button onClick={() => setFile(null)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                <button onClick={() => setFile(null)} className="p-2 bg-white dark:bg-slate-900 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-sm transition-colors border border-slate-200 dark:border-slate-800">
                   <Square className="w-4 h-4" />
                 </button>
               </div>
@@ -310,139 +280,119 @@ function Home() {
           </div>
         </div>
 
-        <div className="dashboard-card p-6">
-          <h2 className="font-semibold text-lg mb-4">Transcription Settings</h2>
-          <div className="flex flex-col gap-4">
+        <div className="glass-panel p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <h2 className="font-bold text-xl">AI Settings</h2>
+          </div>
+          
+          <div className="flex flex-col gap-5">
             <div>
-              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Language</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Original Language</label>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
                 disabled={isProcessing}
-                className="input-minimal w-full"
+                className="input-glass w-full appearance-none"
               >
-                <option value="auto">Auto-Detect</option>
+                <option value="auto">✨ Auto-Detect Language</option>
                 <option value="en">English</option>
                 <option value="hi">Hindi</option>
                 <option value="kn">Kannada</option>
               </select>
             </div>
 
-            <div className="flex items-center gap-3 bg-slate-50 dark:bg-[#09090b] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-              <input
-                type="checkbox"
-                id="multiSpeaker"
-                checked={multiSpeaker}
-                onChange={(e) => setMultiSpeaker(e.target.checked)}
-                disabled={isProcessing}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
-              />
-              <label htmlFor="multiSpeaker" className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer flex-1">
-                Enable Multiple Speakers
-                <p className="text-xs text-slate-500 font-normal mt-0.5">Uses AssemblyAI (English only)</p>
-              </label>
-            </div>
+            <label className="flex items-start gap-3 input-glass cursor-pointer hover:border-blue-300 dark:hover:border-blue-700/50 group">
+              <div className="pt-1">
+                <input
+                  type="checkbox"
+                  id="multiSpeaker"
+                  checked={multiSpeaker}
+                  onChange={(e) => setMultiSpeaker(e.target.checked)}
+                  disabled={isProcessing}
+                  className="w-4 h-4 text-blue-600 rounded border-slate-300 dark:border-slate-600 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Speaker Diarization
+                </p>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Separate text by who is speaking (AssemblyAI)</p>
+              </div>
+            </label>
             
             <button 
               onClick={handleTranscribe}
               disabled={isProcessing || (!file && !youtubeUrl)}
-              className="w-full flex justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed py-3 rounded-xl font-medium shadow-sm transition-all mt-2"
+              className="w-full flex justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-xl font-bold shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] mt-2"
             >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              {isProcessing ? 'Processing...' : 'Transcribe'}
+              {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
+              {isProcessing ? 'Transcribing via AI...' : 'Transcribe Audio'}
             </button>
           </div>
         </div>
 
-        {/* Translation Settings */}
-        {transcript && !isProcessing && (
-          <div className="dashboard-card p-6">
-            <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
-              <Globe className="w-5 h-5 text-slate-400" /> Translate
-            </h2>
-            <div className="flex flex-col gap-4">
-              <select
-                value={targetLanguage}
-                onChange={(e) => setTargetLanguage(e.target.value)}
-                disabled={isTranslating}
-                className="input-minimal w-full"
-              >
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="kn">Kannada</option>
-                <option value="ml">Malayalam</option>
-                <option value="mr">Marathi</option>
-                <option value="bn">Bengali</option>
-                <option value="ar">Arabic</option>
-                <option value="te">Telugu</option>
-                <option value="ta">Tamil</option>
-              </select>
-              <button 
-                onClick={handleTranslate}
-                disabled={isTranslating}
-                className="w-full flex justify-center items-center gap-2 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 py-3 rounded-xl font-medium transition-all"
-              >
-                {isTranslating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Translate'}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Right Column: Outputs */}
       <div className="lg:col-span-7 flex flex-col gap-6">
-        <div className="dashboard-card p-6 flex flex-col h-full min-h-[400px]">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-semibold text-lg">Transcript</h2>
+        
+        <div className="glass-panel p-8 flex flex-col h-full min-h-[500px]">
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200/50 dark:border-slate-800/50">
+            <h2 className="font-bold text-xl flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+              Transcription Output
+            </h2>
+            
             {transcript && (
               <div className="flex gap-2">
-                <button onClick={handleCopy} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-slate-50 dark:bg-[#09090b] rounded-lg border border-slate-200 dark:border-slate-800">
+                <button 
+                  onClick={navigateToTranslate} 
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg transition-colors border border-purple-200 dark:border-purple-800/50"
+                  title="Translate this text"
+                >
+                  <Globe className="w-3.5 h-3.5" /> Translate
+                </button>
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700/50 mx-1"></div>
+                <button onClick={handleCopy} className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm">
                   {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 </button>
-                <button onClick={handleDownload} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-slate-50 dark:bg-[#09090b] rounded-lg border border-slate-200 dark:border-slate-800">
+                <button onClick={handleDownload} className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm">
                   <Download className="w-4 h-4" />
                 </button>
               </div>
             )}
           </div>
 
-          <div className="flex-1 input-minimal border-transparent bg-slate-50 dark:bg-[#09090b] p-4 overflow-y-auto max-h-[700px]">
+          <div className="flex-1 w-full bg-transparent overflow-y-auto max-h-[700px] custom-scrollbar pr-2">
             {isProcessing ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                <Loader2 className="w-6 h-6 animate-spin mb-3" />
-                <p className="text-sm font-medium">Processing audio...</p>
+              <div className="h-full flex flex-col items-center justify-center text-blue-500/80">
+                <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                <p className="font-bold tracking-wide">AI is listening...</p>
               </div>
             ) : transcript ? (
-              <div id="transcript-content" className="text-slate-800 dark:text-slate-200 p-2">
+              <div id="transcript-content" className="text-slate-800 dark:text-slate-200 pb-4">
                 {renderFormattedText(transcript)}
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-400 text-sm">
-                Upload and transcribe audio to see results.
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60">
+                <Mic className="w-16 h-16 mb-4 opacity-20" />
+                <p className="font-bold text-lg">Waiting for audio</p>
+                <p className="text-sm font-medium mt-1">Upload a file or record to begin.</p>
               </div>
             )}
           </div>
           
-          {transcript && (
-            <div className="mt-4 text-xs text-slate-400 font-medium text-right">
-              {transcript.length} characters • {transcript.split(/\s+/).filter(w => w.length > 0).length} words
+          {transcript && !isProcessing && (
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/50 flex justify-between items-center text-xs font-bold text-slate-400">
+              <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">Powered by Groq & AssemblyAI</span>
+              <span>{transcript.length} chars • {transcript.split(/\s+/).filter(w => w.length > 0).length} words</span>
             </div>
           )}
         </div>
 
-        {translatedText && (
-          <div className="dashboard-card p-6 bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-semibold text-lg text-blue-900 dark:text-blue-100">Translation</h2>
-              <button onClick={handleTranslatedCopy} className="p-2 text-blue-500 hover:text-blue-700 transition-colors bg-white dark:bg-[#18181b] rounded-lg border border-blue-100 dark:border-blue-800">
-                {translatedCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-              </button>
-            </div>
-            <div className="text-blue-900 dark:text-blue-100">
-              {renderFormattedText(translatedText)}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
