@@ -46,10 +46,9 @@ function Translate() {
 
       const API_URL = import.meta.env.VITE_API_URL;
 
-      const response = await axios.post(`${API_URL}/speech-to-text`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      const response = await axios.post(`${API_URL}/translate`, {
+        text,
+        targetLanguage,
       });
 
       if (response.data.translatedText) {
