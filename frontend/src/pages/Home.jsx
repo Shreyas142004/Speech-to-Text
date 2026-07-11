@@ -32,6 +32,7 @@ function Home() {
   const location = useLocation();
   const navigate = useNavigate();
   const hasLoadedHistoryRef = useRef(false);
+  const outputRef = useRef(null);
 
   useEffect(() => {
     if (location.state?.transcript && !hasLoadedHistoryRef.current) {
@@ -157,6 +158,9 @@ function Home() {
       } else {
         toast.success("Transcription complete!");
         setTranscript(returnedTranscript);
+        
+        // Scroll to top instead of specifically to output, since output is now the only thing on screen
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         const newEntry = {
           id: Date.now(),
@@ -169,9 +173,10 @@ function Home() {
         const currentHistory = JSON.parse(
           localStorage.getItem("transcriptionHistory") || "[]",
         );
+        const newHistory = [newEntry, ...currentHistory].slice(0, 4);
         localStorage.setItem(
           "transcriptionHistory",
-          JSON.stringify([newEntry, ...currentHistory]),
+          JSON.stringify(newHistory),
         );
       }
     } catch (error) {
@@ -263,11 +268,20 @@ function Home() {
     });
   };
 
+  const resetTranscription = () => {
+    setTranscript("");
+    setFile(null);
+    setYoutubeUrl("");
+    // Optional: Keep language and multiSpeaker settings
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in zoom-in-95 duration-500">
-      {/* Left Column: Controls */}
-      <div className="lg:col-span-5 flex flex-col gap-6">
-        <div className="glass-panel p-8">
+    <div className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+      
+      {!transcript && (
+        <div className="flex flex-col gap-6">
+          <div className="glass-panel p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl">
               <Upload className="w-5 h-5" />
@@ -363,6 +377,7 @@ function Home() {
                 </button>
               </div>
             )}
+
           </div>
         </div>
 
@@ -428,72 +443,54 @@ function Home() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Right Column: Outputs */}
-      <div className="lg:col-span-7 flex flex-col gap-6">
-        <div className="glass-panel p-8 flex flex-col h-full min-h-[500px]">
-          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200/50 dark:border-slate-800/50">
-            <h2 className="font-bold text-xl flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-              Transcription Output
-            </h2>
-
-            {transcript && (
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 mt-4 sm:mt-0">
-                <button
-                  onClick={navigateToTranslate}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg transition-colors border border-purple-200 dark:border-purple-800/50"
-                  title="Translate this text"
-                >
-                  <Globe className="w-3.5 h-3.5" /> Translate
-                </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700/50 mx-1 hidden sm:block"></div>
-                <button
-                  onClick={handleCopy}
-                  className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm"
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </button>
-                <button
-                  onClick={handleDownload}
-                  className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 w-full bg-transparent overflow-y-auto max-h-[700px] custom-scrollbar pr-2">
-            {isProcessing ? (
-              <div className="h-full flex flex-col items-center justify-center text-blue-500/80">
-                <Loader2 className="w-10 h-10 animate-spin mb-4" />
-                <p className="font-bold tracking-wide">AI is listening...</p>
-              </div>
-            ) : transcript ? (
-              <div
-                id="transcript-content"
-                className="text-slate-800 dark:text-slate-200 pb-4"
+      {/* Result View */}
+      {transcript && (
+        <div className="flex flex-col gap-6" ref={outputRef}>
+          <div className="glass-panel p-6 md:p-8 flex flex-col h-full min-h-[500px] border-t-4 border-t-blue-500 shadow-xl">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-slate-200/50 dark:border-slate-800/50">
+              <h2 className="font-bold text-xl flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                Transcription Complete
+              </h2>
+              <button 
+                onClick={resetTranscription}
+                className="text-sm font-bold text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-white dark:bg-slate-900 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm self-start sm:self-auto"
               >
+                Start New
+              </button>
+            </div>
+            
+            {/* Main Content */}
+            <div className="flex-1 w-full bg-transparent overflow-y-auto max-h-[60vh] custom-scrollbar pr-2 mb-6">
+              <div id="transcript-content" className="text-slate-800 dark:text-slate-200">
                 {renderFormattedText(transcript)}
               </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60">
-                <Mic className="w-16 h-16 mb-4 opacity-20" />
-                <p className="font-bold text-lg">Waiting for audio</p>
-                <p className="text-sm font-medium mt-1">
-                  Upload a file or record to begin.
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
 
-          {transcript && !isProcessing && (
-            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/50 flex justify-between items-center text-xs font-bold text-slate-400">
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t border-slate-200/50 dark:border-slate-800/50">
+              <button 
+                onClick={navigateToTranslate} 
+                className="flex-1 flex justify-center items-center gap-2 px-6 py-3.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl transition-all shadow-lg shadow-blue-600/20 hover:-translate-y-1 active:scale-95 group"
+                title="Translate this text"
+              >
+                <Globe className="w-5 h-5 group-hover:rotate-12 transition-transform" /> Translate Text
+              </button>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button onClick={handleCopy} className="flex-1 sm:flex-none flex justify-center items-center gap-2 px-6 py-3.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-slate-100 dark:bg-slate-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl border border-transparent hover:border-blue-200 dark:hover:border-blue-800">
+                  {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />} {copied ? 'Copied!' : 'Copy'}
+                </button>
+                <button onClick={handleDownload} className="flex-1 sm:flex-none flex justify-center items-center gap-2 px-6 py-3.5 text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-slate-100 dark:bg-slate-800/50 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl border border-transparent hover:border-blue-200 dark:hover:border-blue-800">
+                  <Download className="w-5 h-5" /> Save
+                </button>
+              </div>
+            </div>
+
+            {/* Footer metadata */}
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/50 flex flex-wrap gap-2 justify-between items-center text-xs font-bold text-slate-400">
               <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
                 Powered by Groq & AssemblyAI
               </span>
@@ -503,9 +500,9 @@ function Home() {
                 words
               </span>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
