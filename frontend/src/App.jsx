@@ -42,7 +42,7 @@ function Navigation() {
           <Mic className="w-5 h-5" />
         </div>
         <h1 className="font-bold text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-          SpeechConvert
+          Speech-To-Text Convertor
         </h1>
       </Link>
       

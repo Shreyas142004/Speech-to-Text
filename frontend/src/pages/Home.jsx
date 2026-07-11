@@ -277,7 +277,7 @@ function Home() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+    <div className="w-full max-w-5xl mx-auto animate-in fade-in zoom-in-95 duration-500">
       
       {!transcript && (
         <div className="flex flex-col gap-6">
