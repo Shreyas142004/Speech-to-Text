@@ -120,7 +120,7 @@ function Translate() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Original Text Input */}
-        <div className="glass-panel p-6 flex flex-col h-[600px] border-t-4 border-t-blue-500 hover:shadow-xl transition-shadow duration-300">
+        <div className="glass-panel p-6 flex flex-col h-[400px] lg:h-[600px] border-t-4 border-t-blue-500 hover:shadow-xl transition-shadow duration-300">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> Original Text
@@ -145,7 +145,7 @@ function Translate() {
         </div>
 
         {/* Translation Output */}
-        <div className="glass-panel p-6 flex flex-col h-[600px] border-t-4 border-t-indigo-500 relative group hover:shadow-xl transition-shadow duration-300">
+        <div className="glass-panel p-6 flex flex-col h-[400px] lg:h-[600px] border-t-4 border-t-indigo-500 relative group hover:shadow-xl transition-shadow duration-300">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div> Translation

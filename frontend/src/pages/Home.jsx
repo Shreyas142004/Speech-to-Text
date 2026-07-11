@@ -347,7 +347,7 @@ function Home() {
             </h2>
             
             {transcript && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 mt-4 sm:mt-0">
                 <button 
                   onClick={navigateToTranslate} 
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg transition-colors border border-purple-200 dark:border-purple-800/50"
@@ -355,7 +355,7 @@ function Home() {
                 >
                   <Globe className="w-3.5 h-3.5" /> Translate
                 </button>
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700/50 mx-1"></div>
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700/50 mx-1 hidden sm:block"></div>
                 <button onClick={handleCopy} className="p-1.5 text-slate-500 hover:text-blue-600 transition-colors bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm">
                   {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 </button>
