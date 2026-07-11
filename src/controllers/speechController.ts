@@ -47,6 +47,7 @@ const downloadYoutubeAudio = async (url: string, outputPath: string): Promise<st
     await youtubedl(url, {
       extractAudio: true,
       audioFormat: 'mp3',
+      jsRuntimes: process.execPath, // Explicitly provide the Node runtime path
       output: outputPath
     });
     return outputPath;
