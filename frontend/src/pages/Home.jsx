@@ -182,10 +182,10 @@ function Home() {
     } catch (error) {
       console.error("Transcription error:", error);
       const serverMsg =
-        error.response?.data?.error ||
         error.response?.data?.details ||
+        error.response?.data?.error ||
         error.message;
-      toast.error(`Error: ${serverMsg}`);
+      toast.error(serverMsg || "Transcription failed");
       setTranscript(
         `Error: Could not transcribe the audio. \nDetails: ${serverMsg}`,
       );
