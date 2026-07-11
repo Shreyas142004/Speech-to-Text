@@ -7,10 +7,19 @@ import youtubedl from "youtube-dl-exec";
 import ffmpeg from "fluent-ffmpeg";
 // @ts-ignore
 import ffmpegStatic from "ffmpeg-static";
+// @ts-ignore
+import ffprobeStatic from "ffprobe-static";
 
-// Set the ffmpeg path so it works reliably on Render
-if (ffmpegStatic) {
+// Set the ffmpeg paths so it works reliably on Render
+if (ffmpegStatic && ffprobeStatic) {
   ffmpeg.setFfmpegPath(ffmpegStatic);
+  ffmpeg.setFfprobePath(ffprobeStatic.path);
+  
+  // yt-dlp strictly requires both ffmpeg and ffprobe to be in the system PATH.
+  // We temporarily prepend their directories to process.env.PATH so it finds them.
+  const ffmpegDir = path.dirname(ffmpegStatic);
+  const ffprobeDir = path.dirname(ffprobeStatic.path);
+  process.env.PATH = `${ffmpegDir}${path.delimiter}${ffprobeDir}${path.delimiter}${process.env.PATH}`;
 }
 
 // The API keys are loaded from the .env file.
@@ -38,7 +47,6 @@ const downloadYoutubeAudio = async (url: string, outputPath: string): Promise<st
     await youtubedl(url, {
       extractAudio: true,
       audioFormat: 'mp3',
-      ffmpegLocation: ffmpegStatic || undefined,
       output: outputPath
     });
     return outputPath;
