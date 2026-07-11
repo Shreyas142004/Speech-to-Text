@@ -8,13 +8,20 @@ const assemblyai_1 = require("assemblyai");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
-const youtube_dl_exec_1 = __importDefault(require("youtube-dl-exec"));
 const fluent_ffmpeg_1 = __importDefault(require("fluent-ffmpeg"));
 // @ts-ignore
 const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
-// Set the ffmpeg path so it works reliably on Render
-if (ffmpeg_static_1.default) {
+// @ts-ignore
+const ffprobe_static_1 = __importDefault(require("ffprobe-static"));
+// Set the ffmpeg paths so it works reliably on Render
+if (ffmpeg_static_1.default && ffprobe_static_1.default) {
     fluent_ffmpeg_1.default.setFfmpegPath(ffmpeg_static_1.default);
+    fluent_ffmpeg_1.default.setFfprobePath(ffprobe_static_1.default.path);
+    // yt-dlp strictly requires both ffmpeg and ffprobe to be in the system PATH.
+    // We temporarily prepend their directories to process.env.PATH so it finds them.
+    const ffmpegDir = path_1.default.dirname(ffmpeg_static_1.default);
+    const ffprobeDir = path_1.default.dirname(ffprobe_static_1.default.path);
+    process.env.PATH = `${ffmpegDir}${path_1.default.delimiter}${ffprobeDir}${path_1.default.delimiter}${process.env.PATH}`;
 }
 // The API keys are loaded from the .env file.
 const assemblyApiKey = process.env.ASSEMBLYAI_API_KEY;
@@ -33,21 +40,7 @@ const extractAudioFromVideo = (inputPath, outputPath) => {
             .save(outputPath);
     });
 };
-// Helper: Download YouTube audio as MP3
-const downloadYoutubeAudio = async (url, outputPath) => {
-    try {
-        await (0, youtube_dl_exec_1.default)(url, {
-            extractAudio: true,
-            audioFormat: 'mp3',
-            ffmpegLocation: ffmpeg_static_1.default || undefined,
-            output: outputPath
-        });
-        return outputPath;
-    }
-    catch (error) {
-        throw new Error(`Failed to download YouTube audio: ${String(error)}`);
-    }
-};
+// Removed downloadYoutubeAudio
 const speechToText = async (req, res) => {
     if (!client)
         return res.status(500).json({ error: "ASSEMBLYAI_API_KEY is missing." });
@@ -55,9 +48,8 @@ const speechToText = async (req, res) => {
         return res.status(500).json({ error: "GROQ_API_KEY is missing." });
     const requestedLanguage = req.body.language || 'auto';
     const useMultiSpeaker = req.body.multiSpeaker === 'true';
-    const youtubeUrl = req.body.youtubeUrl;
-    if (!req.file && !youtubeUrl) {
-        return res.status(400).json({ error: "No audio file or YouTube URL provided." });
+    if (!req.file) {
+        return res.status(400).json({ error: "No audio or video file provided." });
     }
     let finalAudioPath = "";
     let filesToCleanup = [];
@@ -66,13 +58,7 @@ const speechToText = async (req, res) => {
         // ----------------------------------------------------
         // PRE-PROCESSING: Get standard MP3 file
         // ----------------------------------------------------
-        if (youtubeUrl) {
-            console.log(`[Processor] Downloading YouTube Audio: ${youtubeUrl}`);
-            finalAudioPath = path_1.default.join(tempDir, `yt-${Date.now()}.mp3`);
-            filesToCleanup.push(finalAudioPath);
-            await downloadYoutubeAudio(youtubeUrl, finalAudioPath);
-        }
-        else if (req.file) {
+        if (req.file) {
             filesToCleanup.push(req.file.path);
             // If it's a video file, extract the audio
             if (req.file.mimetype.startsWith('video/')) {
