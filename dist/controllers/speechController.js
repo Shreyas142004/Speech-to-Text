@@ -10,6 +10,12 @@ const path_1 = __importDefault(require("path"));
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const youtube_dl_exec_1 = __importDefault(require("youtube-dl-exec"));
 const fluent_ffmpeg_1 = __importDefault(require("fluent-ffmpeg"));
+// @ts-ignore
+const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
+// Set the ffmpeg path so it works reliably on Render
+if (ffmpeg_static_1.default) {
+    fluent_ffmpeg_1.default.setFfmpegPath(ffmpeg_static_1.default);
+}
 // The API keys are loaded from the .env file.
 const assemblyApiKey = process.env.ASSEMBLYAI_API_KEY;
 const client = assemblyApiKey ? new assemblyai_1.AssemblyAI({ apiKey: assemblyApiKey }) : null;
@@ -33,6 +39,7 @@ const downloadYoutubeAudio = async (url, outputPath) => {
         await (0, youtube_dl_exec_1.default)(url, {
             extractAudio: true,
             audioFormat: 'mp3',
+            ffmpegLocation: ffmpeg_static_1.default || undefined,
             output: outputPath
         });
         return outputPath;

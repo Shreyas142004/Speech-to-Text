@@ -5,6 +5,13 @@ import path from "path";
 import Groq from "groq-sdk";
 import youtubedl from "youtube-dl-exec";
 import ffmpeg from "fluent-ffmpeg";
+// @ts-ignore
+import ffmpegStatic from "ffmpeg-static";
+
+// Set the ffmpeg path so it works reliably on Render
+if (ffmpegStatic) {
+  ffmpeg.setFfmpegPath(ffmpegStatic);
+}
 
 // The API keys are loaded from the .env file.
 const assemblyApiKey = process.env.ASSEMBLYAI_API_KEY;
@@ -31,6 +38,7 @@ const downloadYoutubeAudio = async (url: string, outputPath: string): Promise<st
     await youtubedl(url, {
       extractAudio: true,
       audioFormat: 'mp3',
+      ffmpegLocation: ffmpegStatic || undefined,
       output: outputPath
     });
     return outputPath;
