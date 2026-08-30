@@ -43,9 +43,17 @@ const extractAudioFromVideo = (inputPath: string, outputPath: string): Promise<s
 
 // Helper: Extract YouTube Video ID from various URL formats
 const extractYoutubeId = (url: string): string => {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : url;
+  const cleanUrl = url.trim();
+  // Match standard 11-char YouTube ID from watch, shorts, embed, youtu.be, etc.
+  const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  if (match && match[1]) {
+    return match[1];
+  }
+  // If the user entered a raw 11-character ID directly
+  if (cleanUrl.length === 11 && /^[\w-]{11}$/.test(cleanUrl)) {
+    return cleanUrl;
+  }
+  throw new Error("Invalid YouTube video ID or URL format. YouTube video IDs must be 11 characters long.");
 };
 
 // Helper: Download YouTube audio via RapidAPI (Bypasses all server IP blocks!)
