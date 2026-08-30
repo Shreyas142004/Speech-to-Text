@@ -23,6 +23,7 @@ function Home() {
   const [copied, setCopied] = useState(false);
   const [language, setLanguage] = useState("auto");
   const [multiSpeaker, setMultiSpeaker] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
 
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
@@ -115,7 +116,7 @@ function Home() {
   };
 
   const handleTranscribe = async () => {
-    if (!file) return;
+    if (!file && !youtubeUrl) return;
 
     setIsProcessing(true);
     setTranscript("");
@@ -126,6 +127,9 @@ function Home() {
     }
     formData.append("language", language);
     formData.append("multiSpeaker", multiSpeaker);
+    if (youtubeUrl) {
+      formData.append("youtubeUrl", youtubeUrl);
+    }
 
     try {
       // const response = await axios.post(
@@ -162,7 +166,9 @@ function Home() {
           id: Date.now(),
           date: new Date().toLocaleString(),
           text: returnedTranscript,
-          fileName: file?.name || "Recorded Audio",
+          fileName: youtubeUrl
+            ? "YouTube Video"
+            : file?.name || "Recorded Audio",
         };
         const currentHistory = JSON.parse(
           localStorage.getItem("transcriptionHistory") || "[]",
@@ -265,6 +271,7 @@ function Home() {
   const resetTranscription = () => {
     setTranscript("");
     setFile(null);
+    setYoutubeUrl("");
     // Optional: Keep language and multiSpeaker settings
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -311,6 +318,14 @@ function Home() {
 
             {!file && !isRecording && (
               <div className="flex flex-col gap-4">
+                <input
+                  type="text"
+                  placeholder="Paste YouTube URL here..."
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="input-glass w-full"
+                />
+
                 <div
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
@@ -405,7 +420,7 @@ function Home() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Speaker Diarization
+                  Multi-Speaker
                 </p>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
                   Separate text by who is speaking (AssemblyAI)
@@ -415,7 +430,7 @@ function Home() {
 
             <button
               onClick={handleTranscribe}
-              disabled={isProcessing || !file}
+              disabled={isProcessing || (!file && !youtubeUrl)}
               className="w-full flex justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-xl font-bold shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] mt-2"
             >
               {isProcessing ? (

@@ -43,7 +43,7 @@ def main():
         system_prompt = f"You are a professional, highly accurate translator. Translate the user's text into the language code/name '{target_lang}'. Do not provide explanations, notes, or conversational filler. Return ONLY the translated text and nothing else."
         
         data = {
-            "model": "llama-3.3-70b-versatile",
+            "model": "openai/gpt-oss-120b",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}

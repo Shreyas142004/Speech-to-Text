@@ -3,6 +3,7 @@ import { AssemblyAI } from "assemblyai";
 import fs from "fs";
 import path from "path";
 import Groq from "groq-sdk";
+import youtubedl from "youtube-dl-exec";
 import ffmpeg from "fluent-ffmpeg";
 // @ts-ignore
 import ffmpegStatic from "ffmpeg-static";
@@ -40,7 +41,21 @@ const extractAudioFromVideo = (inputPath: string, outputPath: string): Promise<s
   });
 };
 
-// Removed downloadYoutubeAudio
+// Helper: Download YouTube audio as MP3
+const downloadYoutubeAudio = async (url: string, outputPath: string): Promise<string> => {
+  try {
+    await youtubedl(url, {
+      extractAudio: true,
+      audioFormat: 'mp3',
+      // @ts-ignore
+      jsRuntimes: process.execPath, // Explicitly provide the Node runtime path
+      output: outputPath
+    });
+    return outputPath;
+  } catch (error) {
+    throw new Error(`Failed to download YouTube audio: ${String(error)}`);
+  }
+};
 
 export const speechToText = async (req: Request, res: Response): Promise<any> => {
   if (!client) return res.status(500).json({ error: "ASSEMBLYAI_API_KEY is missing." });
@@ -48,9 +63,10 @@ export const speechToText = async (req: Request, res: Response): Promise<any> =>
 
   const requestedLanguage = req.body.language || 'auto';
   const useMultiSpeaker = req.body.multiSpeaker === 'true';
+  const youtubeUrl = req.body.youtubeUrl;
 
-  if (!req.file) {
-    return res.status(400).json({ error: "No audio or video file provided." });
+  if (!req.file && !youtubeUrl) {
+    return res.status(400).json({ error: "No audio file or YouTube URL provided." });
   }
 
   let finalAudioPath = "";
@@ -62,7 +78,12 @@ export const speechToText = async (req: Request, res: Response): Promise<any> =>
     // ----------------------------------------------------
     // PRE-PROCESSING: Get standard MP3 file
     // ----------------------------------------------------
-    if (req.file) {
+    if (youtubeUrl) {
+      console.log(`[Processor] Downloading YouTube Audio: ${youtubeUrl}`);
+      finalAudioPath = path.join(tempDir, `yt-${Date.now()}.mp3`);
+      filesToCleanup.push(finalAudioPath);
+      await downloadYoutubeAudio(youtubeUrl, finalAudioPath);
+    } else if (req.file) {
       filesToCleanup.push(req.file.path);
       
       // If it's a video file, extract the audio
