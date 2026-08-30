@@ -3,7 +3,7 @@ import { AssemblyAI } from "assemblyai";
 import fs from "fs";
 import path from "path";
 import Groq from "groq-sdk";
-import youtubedl from "youtube-dl-exec";
+import ytdl from "@distube/ytdl-core";
 import ffmpeg from "fluent-ffmpeg";
 // @ts-ignore
 import ffmpegStatic from "ffmpeg-static";
@@ -41,20 +41,27 @@ const extractAudioFromVideo = (inputPath: string, outputPath: string): Promise<s
   });
 };
 
-// Helper: Download YouTube audio as MP3
+// Helper: Download YouTube audio as MP3 using @distube/ytdl-core (Better for Vercel/Serverless)
 const downloadYoutubeAudio = async (url: string, outputPath: string): Promise<string> => {
-  try {
-    await youtubedl(url, {
-      extractAudio: true,
-      audioFormat: 'mp3',
-      // @ts-ignore
-      jsRuntimes: process.execPath, // Explicitly provide the Node runtime path
-      output: outputPath
-    });
-    return outputPath;
-  } catch (error) {
-    throw new Error(`Failed to download YouTube audio: ${String(error)}`);
-  }
+  return new Promise((resolve, reject) => {
+    try {
+      const audioStream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
+      const writeStream = fs.createWriteStream(outputPath);
+      
+      audioStream.pipe(writeStream);
+      
+      audioStream.on('error', (error) => {
+        reject(new Error(`Failed to download YouTube audio: ${error.message}`));
+      });
+      
+      writeStream.on('finish', () => resolve(outputPath));
+      writeStream.on('error', (error) => {
+        reject(new Error(`Failed to save YouTube audio: ${error.message}`));
+      });
+    } catch (error: any) {
+      reject(new Error(`Failed to initialize YouTube download: ${error.message}`));
+    }
+  });
 };
 
 export const speechToText = async (req: Request, res: Response): Promise<any> => {
