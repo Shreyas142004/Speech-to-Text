@@ -146,6 +146,7 @@ function Home() {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 120000, // 2 minutes timeout for long YouTube conversions & cold starts
       });
 
       const returnedTranscript = response.data.transcript;
