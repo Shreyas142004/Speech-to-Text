@@ -8,7 +8,7 @@ const assemblyai_1 = require("assemblyai");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
-const youtube_dl_exec_1 = __importDefault(require("youtube-dl-exec"));
+const axios_1 = __importDefault(require("axios"));
 const fluent_ffmpeg_1 = __importDefault(require("fluent-ffmpeg"));
 // @ts-ignore
 const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
@@ -41,21 +41,59 @@ const extractAudioFromVideo = (inputPath, outputPath) => {
             .save(outputPath);
     });
 };
-// Helper: Download YouTube audio as MP3
-const downloadYoutubeAudio = async (url, outputPath) => {
-    try {
-        await (0, youtube_dl_exec_1.default)(url, {
-            extractAudio: true,
-            audioFormat: 'mp3',
-            // @ts-ignore
-            jsRuntimes: process.execPath, // Explicitly provide the Node runtime path
-            output: outputPath
+// Helper: Extract YouTube Video ID from various URL formats
+const extractYoutubeId = (url) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : url;
+};
+// Helper: Download YouTube audio via RapidAPI (Bypasses all server IP blocks!)
+const downloadYoutubeAudio = async (youtubeUrl, outputPath) => {
+    const videoId = extractYoutubeId(youtubeUrl);
+    const rapidApiKey = process.env.RAPIDAPI_KEY || 'ec06d349cemshb189e71374a711ap114098jsnaf41a5477e92';
+    const rapidApiHost = 'youtube-mp4-mp3-downloader.p.rapidapi.com';
+    console.log(`[RapidAPI] Requesting conversion for YouTube ID: ${videoId}`);
+    // Step 1: Initiate download/conversion
+    const initRes = await axios_1.default.get('https://youtube-mp4-mp3-downloader.p.rapidapi.com/api/v1/download', {
+        params: { format: '360', id: videoId },
+        headers: {
+            'x-rapidapi-key': rapidApiKey,
+            'x-rapidapi-host': rapidApiHost
+        }
+    });
+    if (!initRes.data || !initRes.data.progressId) {
+        throw new Error('RapidAPI failed to initiate YouTube conversion.');
+    }
+    const progressId = initRes.data.progressId;
+    console.log(`[RapidAPI] Processing conversion (Progress ID: ${progressId})...`);
+    // Step 2: Poll progress endpoint until completed (max 30 seconds)
+    let downloadUrl = '';
+    for (let i = 0; i < 15; i++) {
+        await new Promise(res => setTimeout(res, 2000));
+        const progressRes = await axios_1.default.get('https://youtube-mp4-mp3-downloader.p.rapidapi.com/api/v1/progress', {
+            params: { id: progressId },
+            headers: {
+                'x-rapidapi-key': rapidApiKey,
+                'x-rapidapi-host': rapidApiHost
+            }
         });
-        return outputPath;
+        if (progressRes.data && progressRes.data.finished && progressRes.data.downloadUrl) {
+            downloadUrl = progressRes.data.downloadUrl;
+            break;
+        }
     }
-    catch (error) {
-        throw new Error(`Failed to download YouTube audio: ${String(error)}`);
+    if (!downloadUrl) {
+        throw new Error('RapidAPI conversion timed out or failed to return audio link.');
     }
+    console.log(`[RapidAPI] Downloading converted audio file from stream link...`);
+    // Step 3: Stream the converted audio file into our local temp path for AssemblyAI / Groq
+    const fileWriter = fs_1.default.createWriteStream(outputPath);
+    const audioStream = await axios_1.default.get(downloadUrl, { responseType: 'stream' });
+    return new Promise((resolve, reject) => {
+        audioStream.data.pipe(fileWriter);
+        fileWriter.on('finish', () => resolve(outputPath));
+        fileWriter.on('error', (err) => reject(new Error(`Failed to save stream: ${err.message}`)));
+    });
 };
 const speechToText = async (req, res) => {
     if (!client)
