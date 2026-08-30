@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: speech-to-text-backend
+    env: node
+    buildCommand: npm install && npm run build:backend
+    startCommand: npm start
+    envVars:
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PORT
+        value: 4000
